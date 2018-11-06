@@ -4,7 +4,9 @@ import classad
 import json
 import time
 from StompAMQ import StompAMQ
+from my_utils import convert_ClassAd_to_json
 import logging 
+import pdb
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
@@ -41,7 +43,8 @@ def get_projection_from_file(filename):
 
 
 CentralManagerMachine="vocms0809.cern.ch"
-projection_schedd=get_projection_from_file("classAds/schedd")
+#projection_schedd=get_projection_from_file("classAds/schedd")
+projection_schedd=get_projection_from_file("classAds/schedd.short")
 projection_startd=get_projection_from_file("classAds/startd")
 projection_negotiator=get_projection_from_file("classAds/negotiator")
 projection_collector=get_projection_from_file("classAds/collector")
@@ -57,17 +60,28 @@ collector = htcondor.Collector(CentralManagerMachine)
 collector9620 = htcondor.Collector(CentralManagerMachine+":9620")
 
 ads_schedd = collector9620.query(htcondor.AdTypes.Schedd, "true", projection_schedd)
+
+#Convert the Ad into json
+json_list=[]
 for ad in ads_schedd[:2]:
-	print(ad)
-#
-#
+    #TODO:
+        # - fix convert_ClassAd_to_json to not append last comma
+    json_ad=convert_ClassAd_to_json(ad)
+    #Remove last comma (needs to be fixed)
+    json_list.append(json_ad[:-1])
+
+print(json_list)
+
+#DEBUG: if json is wrongly created the next pice will fail
+for json_ad in json_list:
+    json.loads(json_ad)
+
+
 #repls = ('hello', 'goodbye'), ('world', 'earth')
 #s = 'hello, world'
+## s - is the initial value
 #ss=reduce(lambda a, kv: a.replace(*kv), repls, s)
-#
-#print(ss)
 
-#log.debug("schedd Ad:  \n%s", str(ads_schedd))
 
 
 
