@@ -1,11 +1,8 @@
 #!/usr/bin/python
-import sys
 import htcondor
 import classad
 import json
 import time
-import datetime
-from ConvertClassAdtoJson import convert_ClassAd_to_json
 from StompAMQ import StompAMQ
 import logging 
 
