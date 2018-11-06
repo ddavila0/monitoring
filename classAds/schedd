@@ -1,0 +1,15 @@
+Autoclusters
+CMSGWMS_Type
+MaxJobsRunning
+MyType
+Name
+NumOwners
+RecentDaemonCoreDutyCycle
+RecentJobsCompleted
+RecentJobsStarted
+RecentJobsSubmitted
+RecentResourceRequestsSent
+ServerTime
+TotalHeldJobs
+TotalIdleJobs
+TotalRunningJobs
