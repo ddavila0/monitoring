@@ -10,23 +10,8 @@ import pdb
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
-#my_cert="/etc/grid-security/hostcert.pem"
-#my_key="/etc/grid-security/hostkey.pem"
-#
-#amq=StompAMQ("","","monit_prod_cms_si_condor","/topic/cms.si.condor", [('dashb-test-mb.cern.ch', 61123)], logger=log, cert=my_cert, key=my_key, use_ssl=True)
-#
-#ts=int(time.time())
-#basic_document = {"attr1": "val1",
-#                    "attr2": "val2"	}
-#
-#doc=[basic_document]
-#notification=amq.make_notification(doc,"test_raw", 1)
-#
-# 
-#failedNotifications=amq.send(notification)
-#for failed in failedNotifications:
-#    print("Failed")
-#    print(failed)
+my_cert="/etc/grid-security/hostcert.pem"
+my_key="/etc/grid-security/hostkey.pem"
 
 ''' 
 	Reads the  attributes in <filename> and creates a list
@@ -67,14 +52,24 @@ for ad in ads_schedd[:2]:
     #TODO:
         # - fix convert_ClassAd_to_json to not append last comma
     json_ad=convert_ClassAd_to_json(ad)
-    #Remove last comma (needs to be fixed)
-    json_list.append(json_ad[:-1])
+    json_dict=json.loads(json_ad[:-1])
+    json_list.append(json_dict)
 
-print(json_list)
 
-#DEBUG: if json is wrongly created the next pice will fail
-for json_ad in json_list:
-    json.loads(json_ad)
+amq=StompAMQ("","","monit_prod_cms_si_condor","/topic/cms.si.condor", [('dashb-test-mb.cern.ch', 61123)], logger=log, cert=my_cert, key=my_key, use_ssl=True)
+
+timestamp=int(time.time())
+notification=amq.make_notification(json_list,"test_raw", "itb", "schedd", ts=timestamp)
+print(notification)
+
+ 
+failedNotifications=amq.send(notification)
+for failed in failedNotifications:
+    print("Failed")
+    print(failed)
+
+
+
 
 
 #repls = ('hello', 'goodbye'), ('world', 'earth')

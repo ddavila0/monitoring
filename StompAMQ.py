@@ -146,7 +146,7 @@ class StompAMQ(object):
             return body
         return
 
-    def make_notification(self, payload, docType, docId, producer=None, ts=None):
+    def make_notification(self, payload, docType, pool, classAd_type, producer=None, ts=None):
         """
         Given a single payload (or a list of them), generate a list
         of notifications including the specified data.
@@ -176,7 +176,9 @@ class StompAMQ(object):
             # Add body consisting of the payload and metadata
             body = {'payload': doc,
                     'metadata': {'timestamp': ts,
-                                 'id': docId}
+                                 'pool': pool,
+                                 'classAd_type': classAd_type}
+        
                    }
             notification['body'] = body
             docs.append(notification)
