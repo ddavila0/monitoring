@@ -26,6 +26,18 @@ def get_projection_from_file(filename):
 
 	return attr_list
 
+def convert_ads_to_dict_list(ads):
+    # TODO: make convertion to dictionary directly
+    dict_list=[]
+    for ad in ads:
+        #TODO:
+            # - fix convert_ClassAd_to_json to not append last comma
+        json_ad=convert_ClassAd_to_json(ad)
+        dict_ad=json.loads(json_ad[:-1])
+        dict_list.append(dict_ad)
+
+    return dict_list
+   
 
 CentralManagerMachine="vocms0809.cern.ch"
 #projection_schedd=get_projection_from_file("classAds/schedd")
@@ -45,22 +57,13 @@ collector = htcondor.Collector(CentralManagerMachine)
 collector9620 = htcondor.Collector(CentralManagerMachine+":9620")
 
 ads_schedd = collector9620.query(htcondor.AdTypes.Schedd, "true", projection_schedd)
-
-#Convert the Ad into json
-json_list=[]
-for ad in ads_schedd[:2]:
-    #TODO:
-        # - fix convert_ClassAd_to_json to not append last comma
-    json_ad=convert_ClassAd_to_json(ad)
-    json_dict=json.loads(json_ad[:-1])
-    json_list.append(json_dict)
+dict_list_schedd= convert_ads_to_dict_list(ads_schedd)
 
 
 amq=StompAMQ("","","monit_prod_cms_si_condor","/topic/cms.si.condor", [('dashb-test-mb.cern.ch', 61123)], logger=log, cert=my_cert, key=my_key, use_ssl=True)
 
 timestamp=int(time.time())
-notification=amq.make_notification(json_list,"test_raw", "itb", "schedd", ts=timestamp)
-print(notification)
+notification=amq.make_notification(dict_list_schedd,"test_raw", "itb", "schedd", ts=timestamp)
 
  
 failedNotifications=amq.send(notification)
