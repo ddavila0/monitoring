@@ -163,11 +163,11 @@ amq=StompAMQ(monit_username, monit_password, monit_producer, monit_topic, monit_
 #-----------------------------------------------------------------------------#
 
 
-#Pull and Push data from Schedds
+# Pull and Push data from Schedds
 pull_and_push(collector9620, htcondor.AdTypes.Schedd, projection_schedd, amq, "schedd", "itb")
 
 # Pull and Push data from Negotiators
-#pull_and_push(collector, htcondor.AdTypes.Negotiator, projection_negotiator, amq, "negotiator", "itb")
+pull_and_push(collector, htcondor.AdTypes.Negotiator, projection_negotiator, amq, "negotiator", "itb")
 
 # Pull and Push data from Startds
 #pull_and_push(collector, htcondor.AdTypes.Startd, projection_startd, amq, "startd", "itb")
