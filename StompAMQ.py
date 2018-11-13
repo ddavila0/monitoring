@@ -47,6 +47,13 @@ class StompyListener(object):
 
         return (headers, body)
 
+    def on_receipt(self, headers, body):
+        self.logger.debug('on_receipt %s %s', str(headers), str(body))
+
+    def on_receiver_loop_completed(self, headers, body):
+        self.logger.debug('on_receiver_loop_completed  %s %s', str(headers), str(body))
+
+
 
 class StompAMQ(object):
     """
@@ -66,11 +73,12 @@ class StompAMQ(object):
     # Version number to be added in header
     _version = '0.2'
 
-    def __init__(self, username, password, producer, topic,
+    def __init__(self, username, password, producer, doc_type,  topic,
                  host_and_ports=None, logger=None, cert=None, key=None, use_ssl=False):
         self._username = username
         self._password = password
         self._producer = producer
+        self._doc_type = doc_type
         self._topic = topic
         self._host_and_ports = host_and_ports or [('agileinf-mb.cern.ch', 61213)]
         self.logger = logger if logger else logging.getLogger()
@@ -109,13 +117,13 @@ class StompAMQ(object):
         except stomp.exception.ConnectFailedException as exc:
             self.logger.error("Connection to %s failed %s", repr(self._host_and_ports), str(exc))
             return []
-
+        conn.subscribe("/topic/cms.si.condor", 1)
         failedNotifications = []
         for notification in data:
             result = self._send_single(conn, notification)
             if result:
                 failedNotifications.append(result)
-
+        time.sleep(4)
         if conn.is_connected():
             conn.disconnect()
 
@@ -146,7 +154,7 @@ class StompAMQ(object):
             return body
         return
 
-    def make_notification(self, payload, docType, pool, classAd_type, producer=None, ts=None):
+    def make_notification(self, payload, metadata, doc_type_prefix, producer=None):
         """
         Given a single payload (or a list of them), generate a list
         of notifications including the specified data.
@@ -160,12 +168,12 @@ class StompAMQ(object):
         :return: a list of notifications with the proper metadata
         """
         producer = producer or self._producer
-        ts = ts or int(time.time())
 
         if isinstance(payload, dict):
             payload = [payload]  # it was a single document
 
-        commonHeaders = {'type': docType,
+        commonHeaders = {'type': self._doc_type,
+                         'type_prefix' : doc_type_prefix, 
                          'version': self._version,
                          'producer': producer}
 
@@ -175,11 +183,8 @@ class StompAMQ(object):
             notification.update(commonHeaders)
             # Add body consisting of the payload and metadata
             body = {'payload': doc,
-                    'metadata': {'timestamp': ts,
-                                 'pool': pool,
-                                 'classAd_type': classAd_type}
-        
-                   }
+                    'metadata': metadata}
+ 
             notification['body'] = body
             docs.append(notification)
 
