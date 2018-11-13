@@ -154,33 +154,22 @@ class StompAMQ(object):
             return body
         return
 
-    def make_notification(self, payload, metadata, doc_type_prefix, producer=None):
+    def make_notification(self, payload, metadata):
         """
         Given a single payload (or a list of them), generate a list
         of notifications including the specified data.
 
         :param payload: Actual notification data.
-        :param docType: document type for the high level metadata.
-        :param docId: document id representing the notification.
-        :param producer: The notification producer.
-        :param ts: timestamp to be added to each document metadata.
 
         :return: a list of notifications with the proper metadata
         """
-        producer = producer or self._producer
 
         if isinstance(payload, dict):
             payload = [payload]  # it was a single document
 
-        commonHeaders = {'type': self._doc_type,
-                         'type_prefix' : doc_type_prefix, 
-                         'version': self._version,
-                         'producer': producer}
-
         docs = []
         for doc in payload:
             notification = {}
-            notification.update(commonHeaders)
             # Add body consisting of the payload and metadata
             body = {'payload': doc,
                     'metadata': metadata}

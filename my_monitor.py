@@ -49,14 +49,18 @@ def convert_ads_to_dict_list(ads):
 def pull_and_push(collector, condor_ad_type, projection, amq, ad_type, pool, constraint="true"):
     ads = collector.query(condor_ad_type, constraint, projection)
     dict_list=convert_ads_to_dict_list(ads)
-    timestamp=int(time.time())
+    # Time in miliseconds is required
+    timestamp=int(time.time()*1000)
     metadata={'timestamp' : timestamp,
-              'ad_type' : ad_type,
+              'producer' : "cms",
+              'type' : "si_condor_"+ad_type,
+              'type_prefix' : "raw",
+              'version' : "0.2",
               'pool' : pool}
 
-    notifications=amq.make_notification(dict_list, metadata, "raw")
-    #for notification in notifications:
-    #    print(json.dumps(notification, sort_keys=True, indent=4))
+    notifications=amq.make_notification(dict_list, metadata)
+    # for notification in notifications:
+    #     print(json.dumps(notification, sort_keys=True, indent=4))
 
     failedNotifications=amq.send(notifications)
     for failed in failedNotifications:
@@ -66,7 +70,8 @@ def pull_and_push(collector, condor_ad_type, projection, amq, ad_type, pool, con
 def pull_and_push_autoclusters(collector, projection, amq, ad_type, pool, constraint="true"):
     projection_aux=['Machine','CondorPlatform', 'Name', 'AddressV1', 'MyAddress', 'CondorVersion']
     schedd_ads =  collector.query(htcondor.AdTypes.Schedd, "true", projection_aux)
-    timestamp=int(time.time())
+    # Time in miliseconds is required
+    timestamp=int(time.time()*1000)
     for schedd_ad in schedd_ads:
         schedd_name=schedd_ad['name']
         schedd = htcondor.Schedd(schedd_ad)
@@ -84,12 +89,15 @@ def pull_and_push_autoclusters(collector, projection, amq, ad_type, pool, constr
             exit(1)
         else:
             dict_list=convert_ads_to_dict_list(ads)
-            metadata={'timestamp': timestamp,
-                      'ad_type' : ad_type,
-                      'schedd' : schedd_name,
-                      'pool' : pool}
+            metadata={'timestamp' : timestamp,
+              'producer' : "cms",
+              'type' : "si_condor_"+ad_type,
+              'type_prefix' : "raw",
+              'version' : "0.2",
+              'pool' : pool,
+              'schedd' : schedd_name}
 
-            notifications=amq.make_notification(dict_list, metadata, ad_type, "raw")
+            notifications=amq.make_notification(dict_list, metadata)
             for notification in notifications:
                 print(json.dumps(notification, sort_keys=True, indent=4))
 
@@ -170,102 +178,3 @@ pull_and_push(collector9620, htcondor.AdTypes.Schedd, projection_schedd, amq, "s
 
 ###############################################################################
 
-#projection_collector=["Name", "Machine"]
-#
-#ads = collector.query(htcondor.AdTypes.Collector, "Machine==\"vocms0809.cern.ch\"", projection_collector)
-##ads = collector.query(htcondor.AdTypes.Collector, "true", projection_collector)
-#print(ads)
-
-
- 
-#failedNotifications=amq.send(notification)
-#for failed in failedNotifications:
-#    print("Failed")
-#    print(failed)
-
-
-
-
-
-#repls = ('hello', 'goodbye'), ('world', 'earth')
-#s = 'hello, world'
-## s - is the initial value
-#ss=reduce(lambda a, kv: a.replace(*kv), repls, s)
-
-
-
-
-
-	
-
-
-#
-#pilot_projection=["State","Activity","SlotType","CPUs","Memory","Disk",
-#  "MyCurrentTime","GLIDEIN_CMSSite","GLIDEIN_ToDie","GLIDEIN_ToRetire",
-#  "GLIDEIN_Job_Max_Time","GLIDEIN_MAX_Walltime","GLIDECLIENT_Name",
-#  "DaemonStartTime","GLIDEIN_Schedd","GlobalJobId","Repackslots",
-#  "DetectedRepackslots","Ioslots","DetectedIoslots","GLIDECLIENT_Group",
-#  "MyType"]
-#
-#nego_projection=["Name","LastNegotiationCycleDuration0","MyCurrentTime",
-#  "MyType"]
-#
-#schedd_projection=["Name","MaxJobsRunning","TotalRunningJobs",
-#  "TotalIdleJobs","TotalHeldJobs","ServerTime","MyType",
-#  "RecentDaemonCoreDutyCycle"]
-#
-#Collector=htcondor.Collector(CentralManagerMachine)
-#Collector9620=htcondor.Collector(CentralManagerMachine+":9620")
-#
-## Negotiator query
-#nego_ads=Collector.query(htcondor.AdTypes.Negotiator,"true",nego_projection)
-#
-## Schedd query
-#schedd_ads=Collector9620.query(htcondor.AdTypes.Schedd,"true",schedd_projection)
-#
-## Pilot query
-#startd_ads=Collector.query(htcondor.AdTypes.Startd,"true",pilot_projection)
-#
-## Idle AutoCluster non-blocking xquery's - projections do not work.
-#queries = []
-#for schedd_ad in Collector.locateAll(htcondor.DaemonTypes.Schedd) :
-#  try :
-#    queries.append(htcondor.Schedd(schedd_ad).xquery(
-#      requirements="JobStatus=?=1",opts=htcondor.QueryOpts.AutoCluster))
-#  except RuntimeError :
-#    print "ERROR connecting to schedd", schedd_ad['Name']
-#autocluster_ads=[]
-#for query in htcondor.poll(queries):
-#  ads=query.nextAdsNonBlocking()
-#  for ad in ads :
-#    autocluster_ads.append(ad)
-#
-## Output the results to json file
-#
-#timestamp=int(time.time())
-#OUTPUTFILE=str(CentralManagerMachine)+"."+str(timestamp)+".js"
-#file=open(OUTPUTFILE,'w')
-#
-#print >> file, "["
-#for record in startd_ads+nego_ads+schedd_ads+autocluster_ads :
-#  convert_ClassAd_to_json(record,file)
-#print >> file, "{\n  \"MyType\" : \"Junk\"\n}\n]"
-#file.close()
-#
-## Verify that the output file is parsable json
-#try :
-#  json_data=open(OUTPUTFILE,"r")
-#except IOError :
-#  print >> sys.stderr, "Unable to open file: "+OUTPUTFILE
-#  sys.exit(4)
-#try :
-#  data = json.load(json_data)
-#  print >> sys.stderr, "json output verified: "+OUTPUTFILE
-#except ValueError :
-#  print >> sys.stderr, "Unable to decode json file: "+OUTPUTFILE
-#  sys.exit(5)
-#json_data.close()
-#
-#print data
-#
-#sys.exit()
