@@ -59,13 +59,10 @@ def pull_and_push(collector, condor_ad_type, projection, amq, ad_type, pool, con
               'pool' : pool}
 
     notifications=amq.make_notification(dict_list, metadata)
-    # for notification in notifications:
-    #     print(json.dumps(notification, sort_keys=True, indent=4))
+    #for notification in notifications:
+    #    print(json.dumps(notification, sort_keys=True, indent=4))
 
-    failedNotifications=amq.send(notifications)
-    for failed in failedNotifications:
-        print("Failed")
-        print(failed)
+    amq.send(notifications)
 
 def pull_and_push_autoclusters(collector, projection, amq, ad_type, pool, constraint="true"):
     projection_aux=['Machine','CondorPlatform', 'Name', 'AddressV1', 'MyAddress', 'CondorVersion']
@@ -117,24 +114,35 @@ def pull_and_push_autoclusters(collector, projection, amq, ad_type, pool, constr
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
 
+# Monit specific configuration
+monit_end_point=[('dashb-mb.cern.ch', 61123)]
+monit_producer="cms"
+monit_topic="/topic/cms.si.condor"
+# username and passwrod aren't necessary when using certificates
+monit_username=""
+monit_password=""
+
 # Certificates used to push data through the AMQ service
 my_cert="/etc/grid-security/hostcert.pem"
 my_key="/etc/grid-security/hostkey.pem"
 
-# Collector to be queried
-CentralManagerMachine="vocms0809.cern.ch"
 #-----------------------------------------------------------------------------#
 
+#-----------------------------------------------------------------------------#
+# Read collector name from arguments
+#-----------------------------------------------------------------------------#
+
+if len(sys.argv) != 2:
+    log.error("Incorrect number of arguments, expecting collector name and got instead:  %s", sys.argv)
+    exit(1)
+collector_name=sys.argv[1]
 
 
 #-----------------------------------------------------------------------------#
 # Read projection list from files
 #-----------------------------------------------------------------------------#
 
-#projection_schedd=get_projection_from_file("classAds/schedd")
 projection_schedd=get_projection_from_file("classAds/schedd")
-log.debug("schedd projection:  %s", str(projection_schedd))
-
 projection_startd=get_projection_from_file("classAds/startd")
 projection_negotiator=get_projection_from_file("classAds/negotiator")
 projection_collector=get_projection_from_file("classAds/collector")
@@ -147,12 +155,11 @@ projection_autocluster=get_projection_from_file("classAds/autocluster")
 # respectively
 #-----------------------------------------------------------------------------#
 
-collector = htcondor.Collector(CentralManagerMachine)
-collector9620 = htcondor.Collector(CentralManagerMachine+":9620")
-end_point_prod=[('dashb-mb.cern.ch', 61123)]
-end_point_test=[('dashb-test-mb.cern.ch', 61123)]
-end_point=end_point_prod
-amq=StompAMQ("","","cms","si_condor","/topic/cms.si.condor", end_point, logger=log, cert=my_cert, key=my_key, use_ssl=True)
+collector = htcondor.Collector(collector_name)
+collector9620 = htcondor.Collector(collector_name+":9620")
+
+
+amq=StompAMQ(monit_username, monit_password, monit_producer, monit_topic, monit_end_point, logger=log, cert=my_cert, key=my_key, use_ssl=True)
 #-----------------------------------------------------------------------------#
 
 

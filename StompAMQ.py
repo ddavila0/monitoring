@@ -73,12 +73,11 @@ class StompAMQ(object):
     # Version number to be added in header
     _version = '0.2'
 
-    def __init__(self, username, password, producer, doc_type,  topic,
+    def __init__(self, username, password, producer,  topic,
                  host_and_ports=None, logger=None, cert=None, key=None, use_ssl=False):
         self._username = username
         self._password = password
         self._producer = producer
-        self._doc_type = doc_type
         self._topic = topic
         self._host_and_ports = host_and_ports or [('agileinf-mb.cern.ch', 61213)]
         self.logger = logger if logger else logging.getLogger()
@@ -117,13 +116,12 @@ class StompAMQ(object):
         except stomp.exception.ConnectFailedException as exc:
             self.logger.error("Connection to %s failed %s", repr(self._host_and_ports), str(exc))
             return []
-        conn.subscribe("/topic/cms.si.condor", 1)
         failedNotifications = []
         for notification in data:
             result = self._send_single(conn, notification)
             if result:
                 failedNotifications.append(result)
-        time.sleep(4)
+
         if conn.is_connected():
             conn.disconnect()
 
