@@ -108,6 +108,34 @@ def pull_and_push_autoclusters(collector, projection, amq, ad_type, pool, output
                 amq.send(notifications)
 
 
+'''
+    Pick from a list of HA collectors, the one running the negotiator(s) daemons
+    :param list_of_collectors : the list of HA collectors
+    :return: one item from the <list_of_collectors>
+'''
+def get_main_collector(list_of_collectors):
+
+    # If the list is empty, exit
+    if len(list_of_collectors) == 0:
+        log.error("List of collectors is empty")
+        exit(6)
+
+    main_collector=""
+    for collector_name in list_of_collectors:
+        collector = htcondor.Collector(collector_name)
+        ads=collector.query(htcondor.AdTypes.Negotiator, "true", ["Name"])
+        if len(ads) !=0:
+            # more than one collector running negotiator(s)
+            if main_collector != "":
+                log.warning("Negotiators are running in both HA hosts")
+            main_collector=collector_name
+            log.warning("Cannot find any negotiator running")
+        # if no negotiator running anywhere, pick the first collector
+        if main_collector == "":
+            main_collector=list_of_collectors[0]
+
+    return main_collector
+
 
 ###############################################################################
 #                                                                             #
@@ -176,12 +204,14 @@ else:
     exit(3)
 
 
-# Get the collector name from the pool name from the following map:
-# TODO:
-#   - Find out wich is the main collector and pick that one
-collector_name= pool_collector_map[pool_name][0]
+# Get a list of collector names from the pool, using the <pool_collector_map>
+list_of_collectors=pool_collector_map[pool_name]
+
+# Pick the main collector (the one running the
+collector_name=get_main_collector(list_of_collectors) 
 
 log.info("\n Pool name: %s\n Output action: %s\n Collector name: %s\n", pool_name, output_action, collector_name)
+exit(0)
 
 #-----------------------------------------------------------------------------#
 # Read projection list from files
