@@ -129,10 +129,11 @@ def get_main_collector(list_of_collectors):
             if main_collector != "":
                 log.warning("Negotiators are running in both HA hosts")
             main_collector=collector_name
-            log.warning("Cannot find any negotiator running")
-        # if no negotiator running anywhere, pick the first collector
-        if main_collector == "":
-            main_collector=list_of_collectors[0]
+
+    # if no negotiator running anywhere, pick the first collector
+    if main_collector == "":
+        log.warning("Cannot find any negotiator running")
+        main_collector=list_of_collectors[0]
 
     return main_collector
 
