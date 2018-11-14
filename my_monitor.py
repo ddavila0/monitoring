@@ -116,7 +116,7 @@ def pull_and_push_autoclusters(collector, projection, amq, ad_type, pool, output
 ###############################################################################
 
 #-----------------------------------------------------------------------------#
-# Setup basic configuration
+# Set basic configuration
 #-----------------------------------------------------------------------------#
 
 # Setup the logger and the log level {ERROR, INFO, DEBUG, WARNING}
@@ -143,6 +143,8 @@ pool_collector_map={"itbdev":   ["vocms0804.cern.ch"],
                     "global" :  ["cmsgwms-collector-global.cern.ch","cmssrv221.fnal.gov"],
                     "cern" :    ["cmsgwms-collector-tier0.cern.ch", "cmssrv239.fnal.gov"]}
 
+# The default output_action is to push the collected data
+output_action="push"
 #-----------------------------------------------------------------------------#
 
 #-----------------------------------------------------------------------------#
@@ -158,8 +160,8 @@ if len(sys.argv) < 2 or len(sys.argv) > 3:
     log.error("Incorrect number of arguments, expecting: pool_name [output_action] and got instead: %s", sys.argv)
     exit(1)
 
-output_action="push"
 action_list=["push","print","both"]
+# Is output_action one of (push, print or both)
 if len(sys.argv) == 3:
     if sys.argv[2] in action_list:
         output_action=sys.argv[2]
