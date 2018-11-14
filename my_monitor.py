@@ -1,4 +1,3 @@
-#!/usr/bin/python
 import htcondor
 import classad
 import json
@@ -148,7 +147,7 @@ def get_main_collector(list_of_collectors):
 #-----------------------------------------------------------------------------#
 
 # Setup the logger and the log level {ERROR, INFO, DEBUG, WARNING}
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%m-%y %H:%M:%S')
 log = logging.getLogger(__name__)
 
 # Monit specific configuration
