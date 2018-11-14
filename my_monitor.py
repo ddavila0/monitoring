@@ -45,8 +45,9 @@ def convert_ads_to_dict_list(ads):
     :param ad_type: the "type" parameter in the metric e.g "schedd"
     :param pool: the pool name to be used in the metadata of the metric e.g "itb"
     :param constraint: the constraint used to query the condor daemon
+    :param output_action: push: push the ads, print: print the ads, both: push and print the ads
 '''
-def pull_and_push(collector, condor_ad_type, projection, amq, ad_type, pool, constraint="true"):
+def pull_and_push(collector, condor_ad_type, projection, amq, ad_type, pool, output_action, constraint="true"):
     ads = collector.query(condor_ad_type, constraint, projection)
     dict_list=convert_ads_to_dict_list(ads)
     # Time in miliseconds is required
@@ -59,12 +60,15 @@ def pull_and_push(collector, condor_ad_type, projection, amq, ad_type, pool, con
               'pool' : pool}
 
     notifications=amq.make_notification(dict_list, metadata)
-    #for notification in notifications:
-    #    print(json.dumps(notification, sort_keys=True, indent=4))
+    # Print the collected data
+    if output_action == "both" or output_action == "print":
+        for notification in notifications:
+            print(json.dumps(notification, sort_keys=True, indent=4))
+    # Push the collected data
+    if output_action == "both" or output_action == "push":
+        amq.send(notifications)
 
-    amq.send(notifications)
-
-def pull_and_push_autoclusters(collector, projection, amq, ad_type, pool, constraint="true"):
+def pull_and_push_autoclusters(collector, projection, amq, ad_type, pool, output_action, constraint="true"):
     projection_aux=['Machine','CondorPlatform', 'Name', 'AddressV1', 'MyAddress', 'CondorVersion']
     schedd_ads =  collector.query(htcondor.AdTypes.Schedd, "true", projection_aux)
     # Time in miliseconds is required
@@ -95,9 +99,13 @@ def pull_and_push_autoclusters(collector, projection, amq, ad_type, pool, constr
               'schedd' : schedd_name}
 
             notifications=amq.make_notification(dict_list, metadata)
-            amq.send(notifications)
-            #for notification in notifications:
-            #    print(json.dumps(notification, sort_keys=True, indent=4))
+            # Print the collected data
+            if output_action == "both" or output_action == "print":
+                for notification in notifications:
+                    print(json.dumps(notification, sort_keys=True, indent=4))
+            # Push the collected data
+            if output_action == "both" or output_action == "push":
+                amq.send(notifications)
 
 
 
@@ -112,7 +120,7 @@ def pull_and_push_autoclusters(collector, projection, amq, ad_type, pool, constr
 #-----------------------------------------------------------------------------#
 
 # Setup the logger and the log level {ERROR, INFO, DEBUG, WARNING}
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 # Monit specific configuration
@@ -127,17 +135,53 @@ monit_password=""
 my_cert="/etc/grid-security/hostcert.pem"
 my_key="/etc/grid-security/hostkey.pem"
 
+# Pool name - Collector mapping
+# TODO:
+#   - Move to a config file
+pool_collector_map={"itbdev":   ["vocms0804.cern.ch"],
+                    "itb" :     ["cmsgwms-collector-itb.cern.ch", "cmssrv215.fnal.gov"],
+                    "global" :  ["cmsgwms-collector-global.cern.ch","cmssrv221.fnal.gov"],
+                    "cern" :    ["cmsgwms-collector-tier0.cern.ch", "cmssrv239.fnal.gov"]}
+
 #-----------------------------------------------------------------------------#
 
 #-----------------------------------------------------------------------------#
 # Read collector name from arguments
 #-----------------------------------------------------------------------------#
+# First argument must be the pool name (itbdev, itb, global, or cern)
+# Second argument denotes the output action of the script:
+#   - push: pushes the collected data to ES
+#   - print: only print the collected data but don't push it
+#   - both: push and print
 
-if len(sys.argv) != 2:
-    log.error("Incorrect number of arguments, expecting collector name and got instead:  %s", sys.argv)
+if len(sys.argv) < 2 or len(sys.argv) > 3:
+    log.error("Incorrect number of arguments, expecting: pool_name [output_action] and got instead: %s", sys.argv)
     exit(1)
-collector_name=sys.argv[1]
 
+output_action="push"
+action_list=["push","print","both"]
+if len(sys.argv) == 3:
+    if sys.argv[2] in action_list:
+        output_action=sys.argv[2]
+    else:
+        log.error("Incorrect ouput_action, expecting: push, print or both and got instead: %s", sys.argv[2])
+        exit(2)
+
+# Is pool in pool map?
+if sys.argv[1] in pool_collector_map:
+    pool_name=sys.argv[1]
+else:
+    log.error("Incorrect pool name, expecting: \
+               %s  and got instead:  %s", str(pool_collector_map.keys()), sys.argv[2])
+    exit(3)
+
+
+# Get the collector name from the pool name from the following map:
+# TODO:
+#   - Find out wich is the main collector and pick that one
+collector_name= pool_collector_map[pool_name][0]
+
+log.info("\n Pool name: %s\n Output action: %s\n Collector name: %s\n", pool_name, output_action, collector_name)
 
 #-----------------------------------------------------------------------------#
 # Read projection list from files
@@ -165,21 +209,28 @@ amq=StompAMQ(monit_username, monit_password, monit_producer, monit_topic, monit_
 
 
 # Pull and Push data from Schedds
-pull_and_push(collector9620, htcondor.AdTypes.Schedd, projection_schedd, amq, "schedd", "itb")
+log.info("Pushing data from schedds")
+pull_and_push(collector9620, htcondor.AdTypes.Schedd, projection_schedd, amq, "schedd", pool_name, output_action)
 
 # Pull and Push data from Negotiators
-pull_and_push(collector, htcondor.AdTypes.Negotiator, projection_negotiator, amq, "negotiator", "itb")
+log.info("Pushing data from negotiator(s)")
+pull_and_push(collector, htcondor.AdTypes.Negotiator, projection_negotiator, amq, "negotiator", pool_name, output_action)
+
 
 # Pull and Push data from Startds
-pull_and_push(collector, htcondor.AdTypes.Startd, projection_startd, amq, "startd", "itb")
+log.info("Pushing data from startds")
+pull_and_push(collector, htcondor.AdTypes.Startd, projection_startd, amq, "startd", pool_name, output_action)
+
 
 # Pull and Push data from Collector (only from main collector, not backup nor ccb)
+log.info("Pushing data from collector")
 const='Machine == "'+ collector_name +'"'
-pull_and_push(collector, htcondor.AdTypes.Collector, projection_collector, amq, "collector", "itb", constraint=const)
+pull_and_push(collector, htcondor.AdTypes.Collector, projection_collector, amq, "collector", pool_name, output_action, constraint=const)
 
 # Pull and Push data from Autoclusters
+log.info("Pushing data from autoclusters")
 const='JobStatus == 1'
-pull_and_push_autoclusters(collector9620, projection_autocluster, amq, "autocluster", "itb", constraint=const)
+pull_and_push_autoclusters(collector9620, projection_autocluster, amq, "autocluster", pool_name, output_action, constraint=const)
 
 ###############################################################################
 
