@@ -95,8 +95,9 @@ def pull_and_push_autoclusters(collector, projection, amq, ad_type, pool, constr
               'schedd' : schedd_name}
 
             notifications=amq.make_notification(dict_list, metadata)
-            for notification in notifications:
-                print(json.dumps(notification, sort_keys=True, indent=4))
+            amq.send(notifications)
+            #for notification in notifications:
+            #    print(json.dumps(notification, sort_keys=True, indent=4))
 
 
 
@@ -111,7 +112,7 @@ def pull_and_push_autoclusters(collector, projection, amq, ad_type, pool, constr
 #-----------------------------------------------------------------------------#
 
 # Setup the logger and the log level {ERROR, INFO, DEBUG, WARNING}
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.ERROR)
 log = logging.getLogger(__name__)
 
 # Monit specific configuration
@@ -170,18 +171,15 @@ pull_and_push(collector9620, htcondor.AdTypes.Schedd, projection_schedd, amq, "s
 pull_and_push(collector, htcondor.AdTypes.Negotiator, projection_negotiator, amq, "negotiator", "itb")
 
 # Pull and Push data from Startds
-#pull_and_push(collector, htcondor.AdTypes.Startd, projection_startd, amq, "startd", "itb")
+pull_and_push(collector, htcondor.AdTypes.Startd, projection_startd, amq, "startd", "itb")
 
 # Pull and Push data from Collector (only from main collector, not backup nor ccb)
-#const='Machine == "'+ CentralManagerMachine +'"'
-#pull_and_push(collector, htcondor.AdTypes.Collector, projection_collector, amq, "collector", "itb", constraint=const)
+const='Machine == "'+ collector_name +'"'
+pull_and_push(collector, htcondor.AdTypes.Collector, projection_collector, amq, "collector", "itb", constraint=const)
 
 # Pull and Push data from Autoclusters
-#const='JobStatus == 1'
-#pull_and_push_autoclusters(collector9620, projection_autocluster, amq, "autocluster", "itb", constraint=const)
-
-#(htcondor.Schedd(schedd_ad).xquery(
-#      requirements="JobStatus=?=1",opts=htcondor.QueryOpts.AutoCluster))
+const='JobStatus == 1'
+pull_and_push_autoclusters(collector9620, projection_autocluster, amq, "autocluster", "itb", constraint=const)
 
 ###############################################################################
 
