@@ -147,8 +147,8 @@ def get_main_collector(list_of_collectors):
 # Set basic configuration
 #-----------------------------------------------------------------------------#
 
-# Setup the logger and the log level {ERROR, INFO, DEBUG, WARNING}
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%m-%y %H:%M:%S')
+# Setup the logger and the log level {CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET}
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s -  %(levelname)s - %(message)s', datefmt='%d-%m-%y %H:%M:%S')
 log = logging.getLogger(__name__)
 
 # Monit specific configuration
@@ -201,8 +201,7 @@ if len(sys.argv) == 3:
 if sys.argv[1] in pool_collector_map:
     pool_name=sys.argv[1]
 else:
-    log.error("Incorrect pool name, expecting: \
-               %s  and got instead:  %s", str(pool_collector_map.keys()), sys.argv[2])
+    log.error("Incorrect pool name, expecting: %s and got instead: %s", str(pool_collector_map.keys()), sys.argv[1])
     exit(3)
 
 
@@ -213,7 +212,6 @@ list_of_collectors=pool_collector_map[pool_name]
 collector_name=get_main_collector(list_of_collectors) 
 
 log.info("\n Pool name: %s\n Output action: %s\n Collector name: %s\n", pool_name, output_action, collector_name)
-exit(0)
 
 #-----------------------------------------------------------------------------#
 # Read projection list from files
