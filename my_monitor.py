@@ -7,6 +7,7 @@ from my_utils import convert_ClassAd_to_json
 import logging 
 import pdb
 import sys
+import socket
 
 ''' 
 	Reads the  attributes in <filename> and creates a list
@@ -254,7 +255,9 @@ pull_and_push(collector, htcondor.AdTypes.Startd, projection_startd, amq, "start
 
 # Pull and Push data from Collector (only from main collector, not backup nor ccb)
 log.info("Pushing data from collector")
-const='Machine == "'+ collector_name +'"'
+# For the constraint we should always use the hostname not the alias
+collector_hostname=socket.gethostbyaddr(collector_name)[0]
+const='Machine == "'+ collector_hostname +'"'
 pull_and_push(collector, htcondor.AdTypes.Collector, projection_collector, amq, "collector", pool_name, output_action, constraint=const)
 
 # Pull and Push data from Autoclusters

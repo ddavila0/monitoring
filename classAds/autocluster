@@ -3,7 +3,6 @@ AutoClusterId
 CMS_JobType
 CRAB_ReqName
 DiskUsage
-GlideinEntryName
 JobCpus
 JobPrio
 JobStatus
